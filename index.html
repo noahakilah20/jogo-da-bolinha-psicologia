@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Jogo da Bolinha</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #222;
+      font-family: Arial, sans-serif;
+    }
+
+    #gameCanvas {
+      display: block;
+      background-color: #111;
+      margin: 0 auto;
+      /* O fundo preto será coberto pela imagem desenhada no canvas */
+    }
+
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: #fff;
+      font-size: 18px;
+      z-index: 10;
+    }
+
+    #titulo {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: #fff;
+      font-size: 20px;
+      font-weight: bold;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <div id="info">
+    Pontuação: <span id="score">0</span><br />
+    Recorde: <span id="recorde">0</span>
+  </div>
+  <div id="titulo">Jogo da Bolinha</div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Carregar imagem de fundo
+    const backgroundImage = new Image();
+    backgroundImage.src = "https://harikacocuklarizmir.com/images/uploads/2dc834e1801c5d89034a2b8454d42ce8.jpg";
+
+    // Barra
+    const paddleWidth = 80;
+    const paddleHeight = 10;
+    let paddleX = (canvas.width - paddleWidth) / 2;
+
+    // Bolinha
+    let ballX = canvas.width / 2;
+    let ballY = canvas.height / 2;
+    const ballRadius = 8;
+    let ballSpeedX = 3;
+    let ballSpeedY = -3;
+
+    // Pontuação
+    let score = 0;
+    let recorde = parseInt(localStorage.getItem("recorde")) || 0;
+    document.getElementById("recorde").textContent = recorde;
+
+    function increaseSpeed() {
+      // Aumenta a velocidade em 0.5 para X e Y, mantendo o sinal (direção)
+      ballSpeedX += ballSpeedX > 0 ? 0.5 : -0.5;
+      ballSpeedY += ballSpeedY > 0 ? 0.5 : -0.5;
+    }
+
+    function draw() {
+      // Desenha a imagem de fundo
+      if (backgroundImage.complete) {
+        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+      } else {
+        // Caso não carregue ainda, limpa com preto
+        ctx.fillStyle = "#111";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      // Desenha bolinha
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "#ff4444";
+      ctx.fill();
+      ctx.closePath();
+
+      // Desenha barra (mesa)
+      ctx.fillStyle = "#00bfff";
+      ctx.fillRect(paddleX, canvas.height - paddleHeight - 10, paddleWidth, paddleHeight);
+
+      // Move bolinha
+      ballX += ballSpeedX;
+      ballY += ballSpeedY;
+
+      // Rebater nas paredes
+      if (ballX + ballRadius > canvas.width || ballX - ballRadius < 0) {
+        ballSpeedX *= -1;
+      }
+      if (ballY - ballRadius < 0) {
+        ballSpeedY *= -1;
+      }
+
+      // Rebater na barra
+      if (
+        ballY + ballRadius >= canvas.height - paddleHeight - 10 &&
+        ballX >= paddleX &&
+        ballX <= paddleX + paddleWidth
+      ) {
+        ballSpeedY *= -1;
+        score++;
+        document.getElementById("score").textContent = score;
+
+        if (score > recorde) {
+          recorde = score;
+          localStorage.setItem("recorde", recorde);
+          document.getElementById("recorde").textContent = recorde;
+        }
+
+        // Aumenta velocidade a cada 5 pontos
+        if (score % 5 === 0) {
+          increaseSpeed();
+        }
+      }
+
+      // Fim de jogo
+      if (ballY + ballRadius > canvas.height) {
+        alert(`Game Over!\nPontuação: ${score}\nRecorde: ${recorde}`);
+        document.location.reload();
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    // Movimento da barra com mouse
+    document.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      paddleX = e.clientX - rect.left - paddleWidth / 2;
+    });
+
+    // Movimento da barra com toque (celular)
+    document.addEventListener("touchmove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      paddleX = e.touches[0].clientX - rect.left - paddleWidth / 2;
+    });
+
+    // Impede que a barra saia da tela
+    setInterval(() => {
+      if (paddleX < 0) paddleX = 0;
+      if (paddleX + paddleWidth > canvas.width) paddleX = canvas.width - paddleWidth;
+    }, 10);
+
+    draw();
+  </script>
+</body>
+</html>
+
+
+
