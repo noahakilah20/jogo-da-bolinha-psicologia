@@ -2,20 +2,18 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <title>Jogo da Bolinha</title>
+  <title>Jogo da Ana</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
-      background-color: #222;
       font-family: Arial, sans-serif;
     }
 
     #gameCanvas {
       display: block;
-      background-color: #111;
       margin: 0 auto;
-      /* O fundo preto será coberto pela imagem desenhada no canvas */
+      background-color: #000;
     }
 
     #info {
@@ -27,142 +25,196 @@
       z-index: 10;
     }
 
-    #titulo {
+    #finalMsg {
       position: absolute;
-      top: 10px;
-      right: 10px;
-      color: #fff;
-      font-size: 20px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 26px;
+      color: #ff69b4;
+      display: none;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 20px;
+      border-radius: 15px;
       font-weight: bold;
-      z-index: 10;
     }
   </style>
 </head>
 <body>
   <canvas id="gameCanvas" width="400" height="600"></canvas>
-  <div id="info">
-    Pontuação: <span id="score">0</span><br />
-    Recorde: <span id="recorde">0</span>
-  </div>
-  <div id="titulo">Jogo da Bolinha</div>
+  <div id="info">Pontuação: <span id="score">0</span></div>
+  <div id="finalMsg">❤️ você é incrível<br>Ana Carollina Souza ❤️</div>
 
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    // Carregar imagem de fundo
-    const backgroundImage = new Image();
-    backgroundImage.src = "https://harikacocuklarizmir.com/images/uploads/2dc834e1801c5d89034a2b8454d42ce8.jpg";
+    // Fundo com imagem de psicologia
+    const bgImage = new Image();
+    bgImage.src = "https://www.psicologo.com.br/blog/wp-content/uploads/2020/06/Psicologia-clinica-capa.jpg";
+
+    // Bolinha rosa
+    let ballX = canvas.width / 2;
+    let ballY = canvas.height - 30;
+    let ballRadius = 7;
+    let ballSpeedX = 3;
+    let ballSpeedY = -3;
 
     // Barra
     const paddleWidth = 80;
     const paddleHeight = 10;
     let paddleX = (canvas.width - paddleWidth) / 2;
 
-    // Bolinha
-    let ballX = canvas.width / 2;
-    let ballY = canvas.height / 2;
-    const ballRadius = 8;
-    let ballSpeedX = 3;
-    let ballSpeedY = -3;
+    // Tijolos (formando coração)
+    const brickRowCount = 9;
+    const brickColumnCount = 7;
+    const brickWidth = 40;
+    const brickHeight = 20;
+    const brickPadding = 5;
+    const brickOffsetTop = 30;
+    const brickOffsetLeft = 30;
 
-    // Pontuação
+    let bricks = [];
+
+    function makeHeartLayout() {
+      // Coração feito à mão em grid 9x7
+      const heart = [
+        "0111011",
+        "1111111",
+        "1111111",
+        "1111111",
+        "0111110",
+        "0011100",
+        "0001000",
+        "0000000",
+        "0000000"
+      ];
+      for (let r = 0; r < brickRowCount; r++) {
+        bricks[r] = [];
+        for (let c = 0; c < brickColumnCount; c++) {
+          bricks[r][c] = {
+            x: 0,
+            y: 0,
+            status: heart[r][c] === "1" ? 1 : 0
+          };
+        }
+      }
+    }
+
+    makeHeartLayout();
+
     let score = 0;
-    let recorde = parseInt(localStorage.getItem("recorde")) || 0;
-    document.getElementById("recorde").textContent = recorde;
+    const totalBricks = bricks.flat().filter(b => b.status === 1).length;
 
-    function increaseSpeed() {
-      // Aumenta a velocidade em 0.5 para X e Y, mantendo o sinal (direção)
-      ballSpeedX += ballSpeedX > 0 ? 0.5 : -0.5;
-      ballSpeedY += ballSpeedY > 0 ? 0.5 : -0.5;
+    function drawBricks() {
+      for (let r = 0; r < brickRowCount; r++) {
+        for (let c = 0; c < brickColumnCount; c++) {
+          const b = bricks[r][c];
+          if (b.status === 1) {
+            const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+            const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+            b.x = brickX;
+            b.y = brickY;
+            ctx.beginPath();
+            ctx.rect(brickX, brickY, brickWidth, brickHeight);
+            ctx.fillStyle = "#ff69b4"; // rosa pink
+            ctx.fill();
+            ctx.closePath();
+          }
+        }
+      }
+    }
+
+    function drawBall() {
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "#ff69b4";
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function drawPaddle() {
+      ctx.beginPath();
+      ctx.rect(paddleX, canvas.height - paddleHeight - 10, paddleWidth, paddleHeight);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function collisionDetection() {
+      for (let r = 0; r < brickRowCount; r++) {
+        for (let c = 0; c < brickColumnCount; c++) {
+          const b = bricks[r][c];
+          if (b.status === 1) {
+            if (
+              ballX > b.x &&
+              ballX < b.x + brickWidth &&
+              ballY > b.y &&
+              ballY < b.y + brickHeight
+            ) {
+              ballSpeedY = -ballSpeedY;
+              b.status = 0;
+              score++;
+              document.getElementById("score").textContent = score;
+              if (score === totalBricks) {
+                document.getElementById("finalMsg").style.display = "block";
+              }
+            }
+          }
+        }
+      }
+    }
+
+    function drawBackground() {
+      if (bgImage.complete) {
+        ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
     }
 
     function draw() {
-      // Desenha a imagem de fundo
-      if (backgroundImage.complete) {
-        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-      } else {
-        // Caso não carregue ainda, limpa com preto
-        ctx.fillStyle = "#111";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      drawBackground();
+      drawBricks();
+      drawBall();
+      drawPaddle();
+      collisionDetection();
+
+      if (ballX + ballSpeedX > canvas.width - ballRadius || ballX + ballSpeedX < ballRadius) {
+        ballSpeedX = -ballSpeedX;
       }
 
-      // Desenha bolinha
-      ctx.beginPath();
-      ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
-      ctx.fillStyle = "#ff4444";
-      ctx.fill();
-      ctx.closePath();
+      if (ballY + ballSpeedY < ballRadius) {
+        ballSpeedY = -ballSpeedY;
+      } else if (ballY + ballSpeedY > canvas.height - ballRadius - 10) {
+        if (ballX > paddleX && ballX < paddleX + paddleWidth) {
+          ballSpeedY = -ballSpeedY;
+        } else {
+          alert("Fim de jogo!");
+          document.location.reload();
+        }
+      }
 
-      // Desenha barra (mesa)
-      ctx.fillStyle = "#00bfff";
-      ctx.fillRect(paddleX, canvas.height - paddleHeight - 10, paddleWidth, paddleHeight);
-
-      // Move bolinha
       ballX += ballSpeedX;
       ballY += ballSpeedY;
-
-      // Rebater nas paredes
-      if (ballX + ballRadius > canvas.width || ballX - ballRadius < 0) {
-        ballSpeedX *= -1;
-      }
-      if (ballY - ballRadius < 0) {
-        ballSpeedY *= -1;
-      }
-
-      // Rebater na barra
-      if (
-        ballY + ballRadius >= canvas.height - paddleHeight - 10 &&
-        ballX >= paddleX &&
-        ballX <= paddleX + paddleWidth
-      ) {
-        ballSpeedY *= -1;
-        score++;
-        document.getElementById("score").textContent = score;
-
-        if (score > recorde) {
-          recorde = score;
-          localStorage.setItem("recorde", recorde);
-          document.getElementById("recorde").textContent = recorde;
-        }
-
-        // Aumenta velocidade a cada 5 pontos
-        if (score % 5 === 0) {
-          increaseSpeed();
-        }
-      }
-
-      // Fim de jogo
-      if (ballY + ballRadius > canvas.height) {
-        alert(`Game Over!\nPontuação: ${score}\nRecorde: ${recorde}`);
-        document.location.reload();
-      }
 
       requestAnimationFrame(draw);
     }
 
-    // Movimento da barra com mouse
+    // Controles
     document.addEventListener("mousemove", (e) => {
       const rect = canvas.getBoundingClientRect();
       paddleX = e.clientX - rect.left - paddleWidth / 2;
     });
 
-    // Movimento da barra com toque (celular)
     document.addEventListener("touchmove", (e) => {
       const rect = canvas.getBoundingClientRect();
       paddleX = e.touches[0].clientX - rect.left - paddleWidth / 2;
     });
 
-    // Impede que a barra saia da tela
-    setInterval(() => {
-      if (paddleX < 0) paddleX = 0;
-      if (paddleX + paddleWidth > canvas.width) paddleX = canvas.width - paddleWidth;
-    }, 10);
-
     draw();
   </script>
 </body>
 </html>
-
-
-
