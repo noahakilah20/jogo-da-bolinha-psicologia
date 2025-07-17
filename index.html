@@ -1,195 +1,237 @@
-<script>
-  const canvas = document.getElementById("gameCanvas");
-  const ctx = canvas.getContext("2d");
-
-  const backgroundImage = new Image();
-  backgroundImage.src = "https://harikacocuklarizmir.com/images/uploads/2dc834e1801c5d89034a2b8454d42ce8.jpg";
-
-  const paddleWidth = 80;
-  const paddleHeight = 10;
-  let paddleX = (canvas.width - paddleWidth) / 2;
-
-  let ballX = canvas.width / 2;
-  let ballY = canvas.height - 30;
-  const ballRadius = 8;
-  let ballSpeedX = 3;
-  let ballSpeedY = -3;
-
-  let score = 0;
-  let recorde = parseInt(localStorage.getItem("recorde")) || 0;
-  document.getElementById("recorde").textContent = recorde;
-
-  const brickRowCount = 7;
-  const brickColumnCount = 7;
-  const brickWidth = 40;
-  const brickHeight = 40;
-  const brickPadding = 5;
-  const brickOffsetTop = 60;
-  const brickOffsetLeft = 25;
-
-  let bricks = [];
-
-  function createHeartBricks() {
-    for (let c = 0; c < brickColumnCount; c++) {
-      bricks[c] = [];
-      for (let r = 0; r < brickRowCount; r++) {
-        // Coração em forma
-        if (
-          (r === 0 && (c === 2 || c === 4)) ||
-          (r === 1 && (c === 1 || c === 2 || c === 3 || c === 4 || c === 5)) ||
-          (r === 2 && (c >= 0 && c <= 6)) ||
-          (r === 3 && (c >= 1 && c <= 5)) ||
-          (r === 4 && (c >= 2 && c <= 4)) ||
-          (r === 5 && c === 3)
-        ) {
-          bricks[c][r] = { x: 0, y: 0, status: 1 };
-        } else {
-          bricks[c][r] = { status: 0 }; // espaço vazio
-        }
-      }
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Brick Breaker Coração</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
     }
-  }
 
-  function drawHeartBrick(x, y) {
-    ctx.beginPath();
-    ctx.moveTo(x + 20, y + 35);
-    ctx.bezierCurveTo(x, y + 20, x, y, x + 20, y + 10);
-    ctx.bezierCurveTo(x + 40, y, x + 40, y + 20, x + 20, y + 35);
-    ctx.fillStyle = "pink";
-    ctx.fill();
-    ctx.closePath();
-  }
-
-  function drawBricks() {
-    for (let c = 0; c < brickColumnCount; c++) {
-      for (let r = 0; r < brickRowCount; r++) {
-        if (bricks[c][r].status === 1) {
-          let brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
-          let brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
-          bricks[c][r].x = brickX;
-          bricks[c][r].y = brickY;
-          drawHeartBrick(brickX, brickY);
-        }
-      }
+    #gameCanvas {
+      display: block;
+      background-color: #111;
     }
-  }
 
-  function collisionDetection() {
-    for (let c = 0; c < brickColumnCount; c++) {
-      for (let r = 0; r < brickRowCount; r++) {
-        let b = bricks[c][r];
-        if (b.status === 1) {
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-family: sans-serif;
+      font-size: 16px;
+      z-index: 10;
+    }
+
+    #mensagemFinal {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: hotpink;
+      font-size: 24px;
+      font-weight: bold;
+      display: none;
+      text-align: center;
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 20px;
+      border-radius: 20px;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <div id="info">Pontuação: <span id="score">0</span> | Recorde: <span id="recorde">0</span></div>
+  <div id="mensagemFinal">❤️ Você é incrível Ana Carollina Souza ❤️</div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const backgroundImage = new Image();
+    backgroundImage.src = "https://harikacocuklarizmir.com/images/uploads/2dc834e1801c5d89034a2b8454d42ce8.jpg";
+
+    const paddleWidth = 80;
+    const paddleHeight = 10;
+    let paddleX = (canvas.width - paddleWidth) / 2;
+
+    let ballX = canvas.width / 2;
+    let ballY = canvas.height - 30;
+    const ballRadius = 8;
+    let ballSpeedX = 3;
+    let ballSpeedY = -3;
+
+    let score = 0;
+    let recorde = parseInt(localStorage.getItem("recorde")) || 0;
+    document.getElementById("recorde").textContent = recorde;
+
+    const brickRowCount = 7;
+    const brickColumnCount = 7;
+    const brickWidth = 40;
+    const brickHeight = 40;
+    const brickPadding = 5;
+    const brickOffsetTop = 60;
+    const brickOffsetLeft = 25;
+
+    let bricks = [];
+
+    function createHeartBricks() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        bricks[c] = [];
+        for (let r = 0; r < brickRowCount; r++) {
           if (
-            ballX > b.x &&
-            ballX < b.x + brickWidth &&
-            ballY > b.y &&
-            ballY < b.y + brickHeight
+            (r === 0 && (c === 2 || c === 4)) ||
+            (r === 1 && (c === 1 || c === 2 || c === 3 || c === 4 || c === 5)) ||
+            (r === 2 && (c >= 0 && c <= 6)) ||
+            (r === 3 && (c >= 1 && c <= 5)) ||
+            (r === 4 && (c >= 2 && c <= 4)) ||
+            (r === 5 && c === 3)
           ) {
-            ballSpeedY *= -1;
-            b.status = 0;
-            score++;
-            document.getElementById("score").textContent = score;
+            bricks[c][r] = { x: 0, y: 0, status: 1 };
+          } else {
+            bricks[c][r] = { status: 0 };
+          }
+        }
+      }
+    }
 
-            if (score > recorde) {
-              recorde = score;
-              localStorage.setItem("recorde", recorde);
-              document.getElementById("recorde").textContent = recorde;
-            }
+    function drawHeartBrick(x, y) {
+      ctx.beginPath();
+      ctx.moveTo(x + 20, y + 35);
+      ctx.bezierCurveTo(x, y + 20, x, y, x + 20, y + 10);
+      ctx.bezierCurveTo(x + 40, y, x + 40, y + 20, x + 20, y + 35);
+      ctx.fillStyle = "pink";
+      ctx.fill();
+      ctx.closePath();
+    }
 
-            if (checkWin()) {
-              setTimeout(() => {
-                ctx.fillStyle = "rgba(0,0,0,0.6)";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = "#fff";
-                ctx.font = "20px Arial";
-                ctx.textAlign = "center";
-                ctx.fillText("❤️Você é incrível Ana Carollina Souza❤️", canvas.width / 2, canvas.height / 2);
-              }, 500);
+    function drawBricks() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          if (bricks[c][r].status === 1) {
+            let brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+            let brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+            bricks[c][r].x = brickX;
+            bricks[c][r].y = brickY;
+            drawHeartBrick(brickX, brickY);
+          }
+        }
+      }
+    }
+
+    function collisionDetection() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          let b = bricks[c][r];
+          if (b.status === 1) {
+            if (
+              ballX > b.x &&
+              ballX < b.x + brickWidth &&
+              ballY > b.y &&
+              ballY < b.y + brickHeight
+            ) {
+              ballSpeedY *= -1;
+              b.status = 0;
+              score++;
+              document.getElementById("score").textContent = score;
+
+              if (score > recorde) {
+                recorde = score;
+                localStorage.setItem("recorde", recorde);
+                document.getElementById("recorde").textContent = recorde;
+              }
+
+              if (checkWin()) {
+                setTimeout(() => {
+                  document.getElementById("mensagemFinal").style.display = "block";
+                }, 300);
+              }
             }
           }
         }
       }
     }
-  }
 
-  function checkWin() {
-    for (let c = 0; c < brickColumnCount; c++) {
-      for (let r = 0; r < brickRowCount; r++) {
-        if (bricks[c][r].status === 1) return false;
+    function checkWin() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          if (bricks[c][r].status === 1) return false;
+        }
       }
-    }
-    return true;
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (backgroundImage.complete) {
-      ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
-    } else {
-      ctx.fillStyle = "#111";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return true;
     }
 
-    drawBricks();
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.beginPath();
-    ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
-    ctx.fillStyle = "#ff4444";
-    ctx.fill();
-    ctx.closePath();
-
-    ctx.fillStyle = "#00bfff";
-    ctx.fillRect(paddleX, canvas.height - paddleHeight - 10, paddleWidth, paddleHeight);
-
-    if (!checkWin()) {
-      ballX += ballSpeedX;
-      ballY += ballSpeedY;
-
-      if (ballX + ballRadius > canvas.width || ballX - ballRadius < 0) {
-        ballSpeedX *= -1;
-      }
-      if (ballY - ballRadius < 0) {
-        ballSpeedY *= -1;
+      if (backgroundImage.complete) {
+        ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.fillStyle = "#111";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
-      if (
-        ballY + ballRadius >= canvas.height - paddleHeight - 10 &&
-        ballX >= paddleX &&
-        ballX <= paddleX + paddleWidth
-      ) {
-        ballSpeedY *= -1;
+      drawBricks();
+
+      // Bolinha rosa
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "#ff69b4";
+      ctx.fill();
+      ctx.closePath();
+
+      ctx.fillStyle = "#00bfff";
+      ctx.fillRect(paddleX, canvas.height - paddleHeight - 10, paddleWidth, paddleHeight);
+
+      if (!checkWin()) {
+        ballX += ballSpeedX;
+        ballY += ballSpeedY;
+
+        if (ballX + ballRadius > canvas.width || ballX - ballRadius < 0) {
+          ballSpeedX *= -1;
+        }
+        if (ballY - ballRadius < 0) {
+          ballSpeedY *= -1;
+        }
+
+        if (
+          ballY + ballRadius >= canvas.height - paddleHeight - 10 &&
+          ballX >= paddleX &&
+          ballX <= paddleX + paddleWidth
+        ) {
+          ballSpeedY *= -1;
+        }
+
+        if (ballY + ballRadius > canvas.height) {
+          alert(`Game Over!\nPontuação: ${score}\nRecorde: ${recorde}`);
+          document.location.reload();
+        }
+
+        collisionDetection();
       }
 
-      if (ballY + ballRadius > canvas.height) {
-        alert(`Game Over!\nPontuação: ${score}\nRecorde: ${recorde}`);
-        document.location.reload();
-      }
-
-      collisionDetection();
+      requestAnimationFrame(draw);
     }
 
-    requestAnimationFrame(draw);
-  }
+    document.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      paddleX = e.clientX - rect.left - paddleWidth / 2;
+    });
 
-  document.addEventListener("mousemove", (e) => {
-    const rect = canvas.getBoundingClientRect();
-    paddleX = e.clientX - rect.left - paddleWidth / 2;
-  });
+    document.addEventListener("touchmove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      paddleX = e.touches[0].clientX - rect.left - paddleWidth / 2;
+    });
 
-  document.addEventListener("touchmove", (e) => {
-    const rect = canvas.getBoundingClientRect();
-    paddleX = e.touches[0].clientX - rect.left - paddleWidth / 2;
-  });
+    setInterval(() => {
+      if (paddleX < 0) paddleX = 0;
+      if (paddleX + paddleWidth > canvas.width) paddleX = canvas.width - paddleWidth;
+    }, 10);
 
-  setInterval(() => {
-    if (paddleX < 0) paddleX = 0;
-    if (paddleX + paddleWidth > canvas.width) paddleX = canvas.width - paddleWidth;
-  }, 10);
-
-  createHeartBricks();
-  draw();
-</script>
-
-
-
+    createHeartBricks();
+    draw();
+  </script>
+</body>
+</html>
