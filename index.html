@@ -1,197 +1,169 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>❤️ Ana Carollina ❤️</title>
+  <title>Jogo da Bolinha</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
-      background: url('https://cdn.pixabay.com/photo/2017/08/30/07/52/psychology-2694804_1280.jpg') no-repeat center center fixed;
-      background-size: cover;
-      font-family: sans-serif;
+      background-color: #000;
+      font-family: Arial, sans-serif;
     }
 
-    canvas {
+    #gameCanvas {
       display: block;
-      margin: auto;
-      background: rgba(255, 255, 255, 0.1);
+      margin: 0 auto;
+      background-color: transparent;
     }
 
-    #message {
+    #info {
       position: absolute;
-      top: 40%;
-      width: 100%;
-      text-align: center;
-      font-size: 24px;
+      top: 10px;
+      left: 10px;
+      color: #000;
+      font-size: 18px;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.5);
+      padding: 5px 10px;
+      border-radius: 8px;
+    }
+
+    #titulo {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: #000;
+      font-size: 20px;
       font-weight: bold;
-      color: #ff1493;
-      background-color: rgba(255, 255, 255, 0.8);
-      display: none;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.5);
+      padding: 5px 10px;
+      border-radius: 8px;
     }
   </style>
 </head>
 <body>
-  <div id="message">❤️ Você é incrível Ana Carollina Souza ❤️</div>
-  <canvas id="gameCanvas" width="400" height="500"></canvas>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <div id="info">
+    Pontuação: <span id="score">0</span><br />
+    Recorde: <span id="recorde">0</span>
+  </div>
+  <div id="titulo">Psicologia 💖</div>
 
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    let ballX = canvas.width / 2;
-    let ballY = canvas.height - 30;
-    let ballRadius = 8;
-    let dx = 2;
-    let dy = -2;
+    const bgImage = new Image();
+    bgImage.src = "https://img.freepik.com/vetores-gratis/fundo-de-psicologia-com-icone_23-2148511440.jpg";
 
+    const paddleWidth = 80;
     const paddleHeight = 10;
-    const paddleWidth = 75;
     let paddleX = (canvas.width - paddleWidth) / 2;
 
-    let rightPressed = false;
-    let leftPressed = false;
-
-    const brickRowCount = 6;
-    const brickColumnCount = 7;
-    const brickWidth = 40;
-    const brickHeight = 15;
-    const brickPadding = 10;
-    const brickOffsetTop = 50;
-    const brickOffsetLeft = 30;
-
-    let bricks = [];
-    for (let c = 0; c < brickColumnCount; c++) {
-      bricks[c] = [];
-      for (let r = 0; r < brickRowCount; r++) {
-        bricks[c][r] = { x: 0, y: 0, status: 1 };
-      }
-    }
+    let ballX = canvas.width / 2;
+    let ballY = canvas.height / 2;
+    const ballRadius = 8;
+    let ballSpeedX = 3;
+    let ballSpeedY = -3;
 
     let score = 0;
+    let recorde = parseInt(localStorage.getItem("recorde")) || 0;
+    document.getElementById("recorde").textContent = recorde;
 
-    function drawBall() {
+    function increaseSpeed() {
+      ballSpeedX += ballSpeedX > 0 ? 0.5 : -0.5;
+      ballSpeedY += ballSpeedY > 0 ? 0.5 : -0.5;
+    }
+
+    function drawHeart(x, y, size) {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.bezierCurveTo(x, y - size / 2, x - size, y - size / 2, x - size, y);
+      ctx.bezierCurveTo(x - size, y + size, x, y + size * 1.5, x, y + size * 2);
+      ctx.bezierCurveTo(x, y + size * 1.5, x + size, y + size, x + size, y);
+      ctx.bezierCurveTo(x + size, y - size / 2, x, y - size / 2, x, y);
+      ctx.fillStyle = "#d81b60";
+      ctx.fill();
+    }
+
+    function draw() {
+      if (bgImage.complete) {
+        ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      // Corações em conjunto
+      for (let i = 0; i < 10; i++) {
+        const angle = i * (Math.PI * 2) / 10;
+        const x = canvas.width / 2 + Math.cos(angle) * 80;
+        const y = canvas.height / 2 + Math.sin(angle) * 40;
+        drawHeart(x, y, 10);
+      }
+
+      // Bolinha
       ctx.beginPath();
       ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
       ctx.fillStyle = "#ff69b4";
       ctx.fill();
       ctx.closePath();
-    }
 
-    function drawPaddle() {
-      ctx.beginPath();
-      ctx.rect(paddleX, canvas.height - paddleHeight - 10, paddleWidth, paddleHeight);
-      ctx.fillStyle = "#000";
-      ctx.fill();
-      ctx.closePath();
-    }
+      // Barra
+      ctx.fillStyle = "#00bfff";
+      ctx.fillRect(paddleX, canvas.height - paddleHeight - 10, paddleWidth, paddleHeight);
 
-    function drawBricks() {
-      for (let c = 0; c < brickColumnCount; c++) {
-        for (let r = 0; r < brickRowCount; r++) {
-          if (bricks[c][r].status == 1) {
-            const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
-            const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
-            bricks[c][r].x = brickX;
-            bricks[c][r].y = brickY;
+      ballX += ballSpeedX;
+      ballY += ballSpeedY;
 
-            ctx.beginPath();
-            ctx.moveTo(brickX + brickWidth / 2, brickY + brickHeight / 2);
-            ctx.bezierCurveTo(brickX + brickWidth / 2 + 10, brickY, brickX + brickWidth, brickY + 10, brickX + brickWidth / 2, brickY + brickHeight);
-            ctx.bezierCurveTo(brickX, brickY + 10, brickX + brickWidth / 2 - 10, brickY, brickX + brickWidth / 2, brickY + brickHeight / 2);
-            ctx.fillStyle = "#c71585";
-            ctx.fill();
-            ctx.closePath();
-          }
+      if (ballX + ballRadius > canvas.width || ballX - ballRadius < 0) ballSpeedX *= -1;
+      if (ballY - ballRadius < 0) ballSpeedY *= -1;
+
+      if (
+        ballY + ballRadius >= canvas.height - paddleHeight - 10 &&
+        ballX >= paddleX &&
+        ballX <= paddleX + paddleWidth
+      ) {
+        ballSpeedY *= -1;
+        score++;
+        document.getElementById("score").textContent = score;
+
+        if (score > recorde) {
+          recorde = score;
+          localStorage.setItem("recorde", recorde);
+          document.getElementById("recorde").textContent = recorde;
         }
+
+        if (score % 5 === 0) increaseSpeed();
       }
+
+      if (ballY + ballRadius > canvas.height) {
+        alert(`Game Over!\nPontuação: ${score}\nRecorde: ${recorde}`);
+        document.location.reload();
+      }
+
+      requestAnimationFrame(draw);
     }
 
-    function drawScore() {
-      ctx.font = "16px Arial";
-      ctx.fillStyle = "#000";
-      ctx.fillText("Pontuação: " + score, 8, 20);
-    }
-
-    function collisionDetection() {
-      for (let c = 0; c < brickColumnCount; c++) {
-        for (let r = 0; r < brickRowCount; r++) {
-          const b = bricks[c][r];
-          if (b.status == 1) {
-            if (
-              ballX > b.x &&
-              ballX < b.x + brickWidth &&
-              ballY > b.y &&
-              ballY < b.y + brickHeight
-            ) {
-              dy = -dy;
-              b.status = 0;
-              score++;
-
-              if (score == brickRowCount * brickColumnCount) {
-                document.getElementById("message").style.display = "block";
-                clearInterval(interval);
-              }
-            }
-          }
-        }
-      }
-    }
-
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawBricks();
-      drawBall();
-      drawPaddle();
-      drawScore();
-      collisionDetection();
-
-      if (ballX + dx > canvas.width - ballRadius || ballX + dx < ballRadius) {
-        dx = -dx;
-      }
-      if (ballY + dy < ballRadius) {
-        dy = -dy;
-      } else if (ballY + dy > canvas.height - paddleHeight - 10 - ballRadius) {
-        if (ballX > paddleX && ballX < paddleX + paddleWidth) {
-          dy = -dy;
-        } else if (ballY + dy > canvas.height - ballRadius) {
-          document.location.reload();
-        }
-      }
-
-      ballX += dx;
-      ballY += dy;
-
-      if (rightPressed && paddleX < canvas.width - paddleWidth) {
-        paddleX += 7;
-      } else if (leftPressed && paddleX > 0) {
-        paddleX -= 7;
-      }
-    }
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Right" || e.key === "ArrowRight") rightPressed = true;
-      else if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = true;
+    document.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      paddleX = e.clientX - rect.left - paddleWidth / 2;
     });
 
-    document.addEventListener("keyup", (e) => {
-      if (e.key === "Right" || e.key === "ArrowRight") rightPressed = false;
-      else if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = false;
-    });
-
-    // 👇 Movimento por toque (touch) corrigido para celular
     document.addEventListener("touchmove", (e) => {
       e.preventDefault();
       const rect = canvas.getBoundingClientRect();
-      let touchX = e.touches[0].clientX - rect.left;
-      paddleX = touchX - paddleWidth / 2;
-
-      if (paddleX < 0) paddleX = 0;
-      if (paddleX + paddleWidth > canvas.width) paddleX = canvas.width - paddleWidth;
+      paddleX = e.touches[0].clientX - rect.left - paddleWidth / 2;
     }, { passive: false });
 
-    const interval = setInterval(draw, 10);
+    setInterval(() => {
+      if (paddleX < 0) paddleX = 0;
+      if (paddleX + paddleWidth > canvas.width) paddleX = canvas.width - paddleWidth;
+    }, 10);
+
+    draw();
   </script>
 </body>
 </html>
