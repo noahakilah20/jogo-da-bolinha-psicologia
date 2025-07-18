@@ -2,41 +2,44 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <title>Noah Game</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jogo da Bolinha</title>
   <style>
-    html, body {
+    body {
       margin: 0;
-      padding: 0;
       overflow: hidden;
       background-color: #000;
       font-family: Arial, sans-serif;
-      touch-action: none;
     }
 
     #gameCanvas {
       display: block;
       margin: 0 auto;
-      background-color: #111;
-      touch-action: none;
-    }
-
-    #info, #titulo {
-      position: absolute;
-      z-index: 10;
-      color: #000;
-      font-size: 18px;
+      background-color: transparent;
     }
 
     #info {
+      position: absolute;
       top: 10px;
       left: 10px;
+      color: #000;
+      font-size: 18px;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.5);
+      padding: 5px 10px;
+      border-radius: 8px;
     }
 
     #titulo {
+      position: absolute;
       top: 10px;
       right: 10px;
+      color: #000;
+      font-size: 20px;
       font-weight: bold;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.5);
+      padding: 5px 10px;
+      border-radius: 8px;
     }
   </style>
 </head>
@@ -46,14 +49,14 @@
     Pontuação: <span id="score">0</span><br />
     Recorde: <span id="recorde">0</span>
   </div>
-  <div id="titulo">Corações de Noah</div>
+  <div id="titulo">Psicologia 💖</div>
 
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    const backgroundImage = new Image();
-    backgroundImage.src = "https://harikacocuklarizmir.com/images/uploads/2dc834e1801c5d89034a2b8454d42ce8.jpg";
+    const bgImage = new Image();
+    bgImage.src = "https://img.freepik.com/vetores-gratis/fundo-de-psicologia-com-icone_23-2148511440.jpg";
 
     const paddleWidth = 80;
     const paddleHeight = 10;
@@ -74,34 +77,49 @@
       ballSpeedY += ballSpeedY > 0 ? 0.5 : -0.5;
     }
 
-    function drawHeart(x, y, size, color) {
+    function drawHeart(x, y, size) {
       ctx.beginPath();
       ctx.moveTo(x, y);
       ctx.bezierCurveTo(x, y - size / 2, x - size, y - size / 2, x - size, y);
-      ctx.bezierCurveTo(x - size, y + size / 2, x, y + size, x, y + size * 1.5);
-      ctx.bezierCurveTo(x, y + size, x + size, y + size / 2, x + size, y);
+      ctx.bezierCurveTo(x - size, y + size, x, y + size * 1.5, x, y + size * 2);
+      ctx.bezierCurveTo(x, y + size * 1.5, x + size, y + size, x + size, y);
       ctx.bezierCurveTo(x + size, y - size / 2, x, y - size / 2, x, y);
-      ctx.fillStyle = color;
+      ctx.fillStyle = "#d81b60";
       ctx.fill();
     }
 
     function draw() {
-      ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+      if (bgImage.complete) {
+        ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
 
-      drawHeart(ballX, ballY, ballRadius, "#ff69b4");
+      // Corações em conjunto
+      for (let i = 0; i < 10; i++) {
+        const angle = i * (Math.PI * 2) / 10;
+        const x = canvas.width / 2 + Math.cos(angle) * 80;
+        const y = canvas.height / 2 + Math.sin(angle) * 40;
+        drawHeart(x, y, 10);
+      }
 
+      // Bolinha
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "#ff69b4";
+      ctx.fill();
+      ctx.closePath();
+
+      // Barra
       ctx.fillStyle = "#00bfff";
       ctx.fillRect(paddleX, canvas.height - paddleHeight - 10, paddleWidth, paddleHeight);
 
       ballX += ballSpeedX;
       ballY += ballSpeedY;
 
-      if (ballX + ballRadius > canvas.width || ballX - ballRadius < 0) {
-        ballSpeedX *= -1;
-      }
-      if (ballY - ballRadius < 0) {
-        ballSpeedY *= -1;
-      }
+      if (ballX + ballRadius > canvas.width || ballX - ballRadius < 0) ballSpeedX *= -1;
+      if (ballY - ballRadius < 0) ballSpeedY *= -1;
 
       if (
         ballY + ballRadius >= canvas.height - paddleHeight - 10 &&
@@ -118,13 +136,11 @@
           document.getElementById("recorde").textContent = recorde;
         }
 
-        if (score % 5 === 0) {
-          increaseSpeed();
-        }
+        if (score % 5 === 0) increaseSpeed();
       }
 
       if (ballY + ballRadius > canvas.height) {
-        alert(`Fim de Jogo!\nPontuação: ${score}\nRecorde: ${recorde}`);
+        alert(`Game Over!\nPontuação: ${score}\nRecorde: ${recorde}`);
         document.location.reload();
       }
 
@@ -137,6 +153,7 @@
     });
 
     document.addEventListener("touchmove", (e) => {
+      e.preventDefault();
       const rect = canvas.getBoundingClientRect();
       paddleX = e.touches[0].clientX - rect.left - paddleWidth / 2;
     }, { passive: false });
