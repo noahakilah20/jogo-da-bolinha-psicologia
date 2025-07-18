@@ -1,248 +1,84 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8" />
-  <title>❤️ Jogo do Amor ❤️</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      font-family: sans-serif;
-    }
+<script>
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
 
-    canvas {
-      display: block;
-      background: url('https://harikacocuklarizmir.com/images/uploads/2dc834e1801c5d89034a2b8454d42ce8.jpg') no-repeat center center;
-      background-size: cover;
-    }
+  let paddleX = (canvas.width - 80) / 2;
+  let ballX = canvas.width / 2;
+  let ballY = canvas.height / 2;
+  let ballRadius = 8;
+  let ballSpeedX = 3;
+  let ballSpeedY = -3;
+  let score = 0;
+  let recorde = parseInt(localStorage.getItem("recorde")) || 0;
+  document.getElementById("recorde").textContent = recorde;
 
-    #mensagem {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: #ff1493;
-      font-size: 28px;
-      font-weight: bold;
-      text-align: center;
-      display: none;
-      background: rgba(255, 255, 255, 0.85);
-      padding: 20px;
-      border-radius: 20px;
-    }
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    #pontuacao {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      color: #000; /* Preto */
-      font-size: 18px;
-      background: rgba(255, 255, 255, 0.7);
-      padding: 10px;
-      border-radius: 10px;
-    }
-  </style>
-</head>
-<body>
-  <canvas id="gameCanvas" width="480" height="640"></canvas>
-  <div id="mensagem">❤️ Você é incrível Ana Carollina Souza ❤️</div>
-  <div id="pontuacao">
-    Pontuação: <span id="score">0</span><br />
-    Recorde: <span id="recorde">0</span>
-  </div>
+    // Bolinha
+    ctx.beginPath();
+    ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+    ctx.fillStyle = "#ff69b4";
+    ctx.fill();
+    ctx.closePath();
 
-  <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const scoreDisplay = document.getElementById('score');
-    const recordeDisplay = document.getElementById('recorde');
-    const mensagem = document.getElementById('mensagem');
+    // Barra
+    ctx.fillStyle = "#222";
+    ctx.fillRect(paddleX, canvas.height - 20, 80, 10);
 
-    let score = 0;
-    let recorde = parseInt(localStorage.getItem('recorde')) || 0;
-    recordeDisplay.textContent = recorde;
+    ballX += ballSpeedX;
+    ballY += ballSpeedY;
 
-    const ball = {
-      x: canvas.width / 2,
-      y: canvas.height - 30,
-      radius: 8,
-      dx: 2,
-      dy: -3,
-      color: "#ff69b4" // Rosa claro
-    };
+    if (ballX + ballRadius > canvas.width || ballX - ballRadius < 0) ballSpeedX *= -1;
+    if (ballY - ballRadius < 0) ballSpeedY *= -1;
 
-    const paddle = {
-      height: 10,
-      width: 75,
-      x: (canvas.width - 75) / 2
-    };
+    if (
+      ballY + ballRadius >= canvas.height - 20 &&
+      ballX >= paddleX &&
+      ballX <= paddleX + 80
+    ) {
+      ballSpeedY *= -1;
+      score++;
+      document.getElementById("score").textContent = score;
 
-    let rightPressed = false;
-    let leftPressed = false;
+      if (score > recorde) {
+        recorde = score;
+        localStorage.setItem("recorde", recorde);
+        document.getElementById("recorde").textContent = recorde;
+      }
 
-    document.addEventListener("keydown", keyDownHandler, false);
-    document.addEventListener("keyup", keyUpHandler, false);
-    document.addEventListener("mousemove", mouseMoveHandler, false);
-
-    function keyDownHandler(e) {
-      if (e.key === "Right" || e.key === "ArrowRight") {
-        rightPressed = true;
-      } else if (e.key === "Left" || e.key === "ArrowLeft") {
-        leftPressed = true;
+      if (score % 5 === 0) {
+        ballSpeedX += ballSpeedX > 0 ? 0.5 : -0.5;
+        ballSpeedY += ballSpeedY > 0 ? 0.5 : -0.5;
       }
     }
 
-    function keyUpHandler(e) {
-      if (e.key === "Right" || e.key === "ArrowRight") {
-        rightPressed = false;
-      } else if (e.key === "Left" || e.key === "ArrowLeft") {
-        leftPressed = false;
-      }
+    if (ballY + ballRadius > canvas.height) {
+      alert(`Game Over!\nPontuação: ${score}\nRecorde: ${recorde}`);
+      document.location.reload();
     }
 
-    function mouseMoveHandler(e) {
-      const relativeX = e.clientX - canvas.getBoundingClientRect().left;
-      if (relativeX > 0 && relativeX < canvas.width) {
-        paddle.x = relativeX - paddle.width / 2;
-      }
-    }
+    requestAnimationFrame(draw);
+  }
 
-    const brickRowCount = 9;
-    const brickColumnCount = 9;
-    const brickWidth = 40;
-    const brickHeight = 20;
-    const brickPadding = 10;
-    const brickOffsetTop = 50;
-    const brickOffsetLeft = 30;
+  // Movimento com mouse
+  document.addEventListener("mousemove", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    paddleX = e.clientX - rect.left - 40;
+  });
 
-    const bricks = [];
+  // Movimento com dedo (toque)
+  document.addEventListener("touchmove", (e) => {
+    e.preventDefault(); // impedir rolagem da tela
+    const rect = canvas.getBoundingClientRect();
+    paddleX = e.touches[0].clientX - rect.left - 40;
+  }, { passive: false });
 
-    for (let c = 0; c < brickColumnCount; c++) {
-      bricks[c] = [];
-      for (let r = 0; r < brickRowCount; r++) {
-        const dx = c - 4;
-        const dy = r - 4;
-        const d = Math.sqrt(dx * dx + dy * dy);
-        if (d <= 4.5) {
-          bricks[c][r] = { x: 0, y: 0, status: 1 };
-        } else {
-          bricks[c][r] = { x: 0, y: 0, status: 0 };
-        }
-      }
-    }
+  // Impedir que a barra saia da tela
+  setInterval(() => {
+    if (paddleX < 0) paddleX = 0;
+    if (paddleX + 80 > canvas.width) paddleX = canvas.width - 80;
+  }, 10);
 
-    function drawBall() {
-      ctx.beginPath();
-      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-      ctx.fillStyle = ball.color;
-      ctx.fill();
-      ctx.closePath();
-    }
-
-    function drawPaddle() {
-      ctx.beginPath();
-      ctx.rect(paddle.x, canvas.height - paddle.height - 10, paddle.width, paddle.height);
-      ctx.fillStyle = "#000";
-      ctx.fill();
-      ctx.closePath();
-    }
-
-    function drawBricks() {
-      for (let c = 0; c < brickColumnCount; c++) {
-        for (let r = 0; r < brickRowCount; r++) {
-          const b = bricks[c][r];
-          if (b.status > 0) {
-            const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
-            const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
-            b.x = brickX;
-            b.y = brickY;
-
-            ctx.beginPath();
-            ctx.moveTo(brickX + brickWidth / 2, brickY);
-            ctx.bezierCurveTo(
-              brickX + brickWidth, brickY - 10,
-              brickX + brickWidth, brickY + brickHeight,
-              brickX + brickWidth / 2, brickY + brickHeight
-            );
-            ctx.bezierCurveTo(
-              brickX, brickY + brickHeight,
-              brickX, brickY - 10,
-              brickX + brickWidth / 2, brickY
-            );
-            ctx.closePath();
-            ctx.fillStyle = b.status === 1 ? "#ff69b4" : "#c71585"; // Rosa claro e escuro
-            ctx.fill();
-          }
-        }
-      }
-    }
-
-    function collisionDetection() {
-      let allBroken = true;
-      for (let c = 0; c < brickColumnCount; c++) {
-        for (let r = 0; r < brickRowCount; r++) {
-          const b = bricks[c][r];
-          if (b.status === 1) {
-            allBroken = false;
-            if (
-              ball.x > b.x &&
-              ball.x < b.x + brickWidth &&
-              ball.y > b.y &&
-              ball.y < b.y + brickHeight
-            ) {
-              ball.dy = -ball.dy;
-              b.status = 2;
-              score++;
-              scoreDisplay.textContent = score;
-              if (score > recorde) {
-                recorde = score;
-                localStorage.setItem('recorde', recorde);
-                recordeDisplay.textContent = recorde;
-              }
-            }
-          }
-        }
-      }
-
-      if (allBroken) {
-        mensagem.style.display = "block";
-      }
-    }
-
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawBricks();
-      drawBall();
-      drawPaddle();
-      collisionDetection();
-
-      if (ball.x + ball.dx > canvas.width - ball.radius || ball.x + ball.dx < ball.radius) {
-        ball.dx = -ball.dx;
-      }
-      if (ball.y + ball.dy < ball.radius) {
-        ball.dy = -ball.dy;
-      } else if (ball.y + ball.dy > canvas.height - ball.radius - 10) {
-        if (ball.x > paddle.x && ball.x < paddle.x + paddle.width) {
-          ball.dy = -ball.dy;
-        } else if (ball.y + ball.dy > canvas.height) {
-          document.location.reload();
-        }
-      }
-
-      ball.x += ball.dx;
-      ball.y += ball.dy;
-
-      if (rightPressed && paddle.x < canvas.width - paddle.width) {
-        paddle.x += 7;
-      } else if (leftPressed && paddle.x > 0) {
-        paddle.x -= 7;
-      }
-
-      requestAnimationFrame(draw);
-    }
-
-    draw();
-  </script>
-</body>
-</html>
+  draw();
+</script>
