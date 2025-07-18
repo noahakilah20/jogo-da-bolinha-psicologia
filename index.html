@@ -1,84 +1,197 @@
-<script>
-  const canvas = document.getElementById("gameCanvas");
-  const ctx = canvas.getContext("2d");
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>❤️ Ana Carollina ❤️</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: url('https://cdn.pixabay.com/photo/2017/08/30/07/52/psychology-2694804_1280.jpg') no-repeat center center fixed;
+      background-size: cover;
+      font-family: sans-serif;
+    }
 
-  let paddleX = (canvas.width - 80) / 2;
-  let ballX = canvas.width / 2;
-  let ballY = canvas.height / 2;
-  let ballRadius = 8;
-  let ballSpeedX = 3;
-  let ballSpeedY = -3;
-  let score = 0;
-  let recorde = parseInt(localStorage.getItem("recorde")) || 0;
-  document.getElementById("recorde").textContent = recorde;
+    canvas {
+      display: block;
+      margin: auto;
+      background: rgba(255, 255, 255, 0.1);
+    }
 
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    #message {
+      position: absolute;
+      top: 40%;
+      width: 100%;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      color: #ff1493;
+      background-color: rgba(255, 255, 255, 0.8);
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="message">❤️ Você é incrível Ana Carollina Souza ❤️</div>
+  <canvas id="gameCanvas" width="400" height="500"></canvas>
 
-    // Bolinha
-    ctx.beginPath();
-    ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
-    ctx.fillStyle = "#ff69b4";
-    ctx.fill();
-    ctx.closePath();
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-    // Barra
-    ctx.fillStyle = "#222";
-    ctx.fillRect(paddleX, canvas.height - 20, 80, 10);
+    let ballX = canvas.width / 2;
+    let ballY = canvas.height - 30;
+    let ballRadius = 8;
+    let dx = 2;
+    let dy = -2;
 
-    ballX += ballSpeedX;
-    ballY += ballSpeedY;
+    const paddleHeight = 10;
+    const paddleWidth = 75;
+    let paddleX = (canvas.width - paddleWidth) / 2;
 
-    if (ballX + ballRadius > canvas.width || ballX - ballRadius < 0) ballSpeedX *= -1;
-    if (ballY - ballRadius < 0) ballSpeedY *= -1;
+    let rightPressed = false;
+    let leftPressed = false;
 
-    if (
-      ballY + ballRadius >= canvas.height - 20 &&
-      ballX >= paddleX &&
-      ballX <= paddleX + 80
-    ) {
-      ballSpeedY *= -1;
-      score++;
-      document.getElementById("score").textContent = score;
+    const brickRowCount = 6;
+    const brickColumnCount = 7;
+    const brickWidth = 40;
+    const brickHeight = 15;
+    const brickPadding = 10;
+    const brickOffsetTop = 50;
+    const brickOffsetLeft = 30;
 
-      if (score > recorde) {
-        recorde = score;
-        localStorage.setItem("recorde", recorde);
-        document.getElementById("recorde").textContent = recorde;
-      }
-
-      if (score % 5 === 0) {
-        ballSpeedX += ballSpeedX > 0 ? 0.5 : -0.5;
-        ballSpeedY += ballSpeedY > 0 ? 0.5 : -0.5;
+    let bricks = [];
+    for (let c = 0; c < brickColumnCount; c++) {
+      bricks[c] = [];
+      for (let r = 0; r < brickRowCount; r++) {
+        bricks[c][r] = { x: 0, y: 0, status: 1 };
       }
     }
 
-    if (ballY + ballRadius > canvas.height) {
-      alert(`Game Over!\nPontuação: ${score}\nRecorde: ${recorde}`);
-      document.location.reload();
+    let score = 0;
+
+    function drawBall() {
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "#ff69b4";
+      ctx.fill();
+      ctx.closePath();
     }
 
-    requestAnimationFrame(draw);
-  }
+    function drawPaddle() {
+      ctx.beginPath();
+      ctx.rect(paddleX, canvas.height - paddleHeight - 10, paddleWidth, paddleHeight);
+      ctx.fillStyle = "#000";
+      ctx.fill();
+      ctx.closePath();
+    }
 
-  // Movimento com mouse
-  document.addEventListener("mousemove", (e) => {
-    const rect = canvas.getBoundingClientRect();
-    paddleX = e.clientX - rect.left - 40;
-  });
+    function drawBricks() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          if (bricks[c][r].status == 1) {
+            const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+            const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+            bricks[c][r].x = brickX;
+            bricks[c][r].y = brickY;
 
-  // Movimento com dedo (toque)
-  document.addEventListener("touchmove", (e) => {
-    e.preventDefault(); // impedir rolagem da tela
-    const rect = canvas.getBoundingClientRect();
-    paddleX = e.touches[0].clientX - rect.left - 40;
-  }, { passive: false });
+            ctx.beginPath();
+            ctx.moveTo(brickX + brickWidth / 2, brickY + brickHeight / 2);
+            ctx.bezierCurveTo(brickX + brickWidth / 2 + 10, brickY, brickX + brickWidth, brickY + 10, brickX + brickWidth / 2, brickY + brickHeight);
+            ctx.bezierCurveTo(brickX, brickY + 10, brickX + brickWidth / 2 - 10, brickY, brickX + brickWidth / 2, brickY + brickHeight / 2);
+            ctx.fillStyle = "#c71585";
+            ctx.fill();
+            ctx.closePath();
+          }
+        }
+      }
+    }
 
-  // Impedir que a barra saia da tela
-  setInterval(() => {
-    if (paddleX < 0) paddleX = 0;
-    if (paddleX + 80 > canvas.width) paddleX = canvas.width - 80;
-  }, 10);
+    function drawScore() {
+      ctx.font = "16px Arial";
+      ctx.fillStyle = "#000";
+      ctx.fillText("Pontuação: " + score, 8, 20);
+    }
 
-  draw();
-</script>
+    function collisionDetection() {
+      for (let c = 0; c < brickColumnCount; c++) {
+        for (let r = 0; r < brickRowCount; r++) {
+          const b = bricks[c][r];
+          if (b.status == 1) {
+            if (
+              ballX > b.x &&
+              ballX < b.x + brickWidth &&
+              ballY > b.y &&
+              ballY < b.y + brickHeight
+            ) {
+              dy = -dy;
+              b.status = 0;
+              score++;
+
+              if (score == brickRowCount * brickColumnCount) {
+                document.getElementById("message").style.display = "block";
+                clearInterval(interval);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBricks();
+      drawBall();
+      drawPaddle();
+      drawScore();
+      collisionDetection();
+
+      if (ballX + dx > canvas.width - ballRadius || ballX + dx < ballRadius) {
+        dx = -dx;
+      }
+      if (ballY + dy < ballRadius) {
+        dy = -dy;
+      } else if (ballY + dy > canvas.height - paddleHeight - 10 - ballRadius) {
+        if (ballX > paddleX && ballX < paddleX + paddleWidth) {
+          dy = -dy;
+        } else if (ballY + dy > canvas.height - ballRadius) {
+          document.location.reload();
+        }
+      }
+
+      ballX += dx;
+      ballY += dy;
+
+      if (rightPressed && paddleX < canvas.width - paddleWidth) {
+        paddleX += 7;
+      } else if (leftPressed && paddleX > 0) {
+        paddleX -= 7;
+      }
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Right" || e.key === "ArrowRight") rightPressed = true;
+      else if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = true;
+    });
+
+    document.addEventListener("keyup", (e) => {
+      if (e.key === "Right" || e.key === "ArrowRight") rightPressed = false;
+      else if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = false;
+    });
+
+    // 👇 Movimento por toque (touch) corrigido para celular
+    document.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      let touchX = e.touches[0].clientX - rect.left;
+      paddleX = touchX - paddleWidth / 2;
+
+      if (paddleX < 0) paddleX = 0;
+      if (paddleX + paddleWidth > canvas.width) paddleX = canvas.width - paddleWidth;
+    }, { passive: false });
+
+    const interval = setInterval(draw, 10);
+  </script>
+</body>
+</html>
