@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Jogo da Ana</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      touch-action: none; /* ajuda em touch */
+    }
+
+    #gameCanvas {
+      display: block;
+      margin: 0 auto;
+      background-color: #000;
+    }
+
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: #000;
+      font-size: 18px;
+      font-weight: bold;
+      background: rgba(255, 255, 255, 0.6);
+      padding: 10px;
+      border-radius: 10px;
+      z-index: 10;
+    }
+
+    #finalMsg {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 26px;
+      color: #000;
+      display: none;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 20px;
+      border-radius: 15px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+  <div id="info">Pontuação: <span id="score">0</span> | Recorde: <span id="highScore">0</span></div>
+  <div id="finalMsg">❤️ você é incrível<br>Ana Carollina Souza ❤️</div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const bgImage = new Image();
+    bgImage.src = "https://harikacocuklarizmir.com/images/uploads/2dc834e1801c5d89034a2b8454d42ce8.jpg";
+
+    let ballX = canvas.width / 2;
+    let ballY = canvas.height - 30;
+    let ballRadius = 7;
+    let ballSpeedX = 3;
+    let ballSpeedY = -3;
+
+    const paddleWidth = 80;
+    const paddleHeight = 10;
+    let paddleX = (canvas.width - paddleWidth) / 2;
+
+    const heartLayout = [
+      "000001111110000",
+      "000111111111000",
+      "001111111111100",
+      "011111111111110",
+      "011111111111110",
+      "011111111111110",
+      "001111111111100",
+      "000111111111000",
+      "000011111110000",
+      "000001111100000",
+      "000000111000000",
+      "000000010000000",
+      "000000000000000"
+    ];
+
+    const brickRowCount = heartLayout.length;
+    const brickColumnCount = heartLayout[0].length;
+    const brickWidth = 24;
+    const brickHeight = 20;
+    const brickPadding = 4;
+    const brickOffsetTop = 30;
+    const brickOffsetLeft = 8;
+
+    let bricks = [];
+
+    function makeHeartLayout() {
+      for (let r = 0; r < brickRowCount; r++) {
+        bricks[r] = [];
+        for (let c = 0; c < brickColumnCount; c++) {
+          bricks[r][c] = {
+            x: 0,
+            y: 0,
+            status: heartLayout[r][c] === "1" ? 1 : 0
+          };
+        }
+      }
+    }
+
+    makeHeartLayout();
+
+    let score = 0;
+    let highScore = localStorage.getItem("highScoreAna") || 0;
+    document.getElementById("highScore").textContent = highScore;
+
+    const totalBricks = bricks.flat().filter(b => b.status === 1).length;
+
+    function drawBricks() {
+      for (let r = 0; r < brickRowCount; r++) {
+        for (let c = 0; c < brickColumnCount; c++) {
+          const b = bricks[r][c];
+          if (b.status === 1) {
+            const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+            const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+            b.x = brickX;
+            b.y = brickY;
+            ctx.beginPath();
+            ctx.rect(brickX, brickY, brickWidth, brickHeight);
+            ctx.fillStyle = "#ff69b4";
+            ctx.fill();
+            ctx.fillStyle = "#000";
+            ctx.font = "14px Arial";
+            ctx.fillText("❤️", brickX + 4, brickY + 15);
+            ctx.closePath();
+          }
+        }
+      }
+    }
+
+    function drawBall() {
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "#ff69b4";
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function drawPaddle() {
+      ctx.beginPath();
+      ctx.rect(paddleX, canvas.height - paddleHeight - 10, paddleWidth, paddleHeight);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function drawMesaAzul() {
+      ctx.beginPath();
+      ctx.rect(0, canvas.height - 60, canvas.width, 60);
+      ctx.fillStyle = "#87CEFA"; // azul claro
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    function collisionDetection() {
+      for (let r = 0; r < brickRowCount; r++) {
+        for (let c = 0; c < brickColumnCount; c++) {
+          const b = bricks[r][c];
+          if (b.status === 1) {
+            if (
+              ballX > b.x &&
+              ballX < b.x + brickWidth &&
+              ballY > b.y &&
+              ballY < b.y + brickHeight
+            ) {
+              ballSpeedY = -ballSpeedY;
+              b.status = 0;
+              score++;
+              document.getElementById("score").textContent = score;
+              if (score > highScore) {
+                highScore = score;
+                localStorage.setItem("highScoreAna", highScore);
+                document.getElementById("highScore").textContent = highScore;
+              }
+              if (score === totalBricks) {
+                document.getElementById("finalMsg").style.display = "block";
+              }
+            }
+          }
+        }
+      }
+    }
+
+    function drawBackground() {
+      if (bgImage.complete) {
+        ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    function draw() {
+      drawBackground();
+      drawMesaAzul(); // mesa azul
+      drawBricks();
+      drawBall();
+      drawPaddle();
+      collisionDetection();
+
+      if (ballX + ballSpeedX > canvas.width - ballRadius || ballX + ballSpeedX < ballRadius) {
+        ballSpeedX = -ballSpeedX;
+      }
+
+      if (ballY + ballSpeedY < ballRadius) {
+        ballSpeedY = -ballSpeedY;
+      } else if (ballY + ballSpeedY > canvas.height - ballRadius - 10) {
+        if (ballX > paddleX && ballX < paddleX + paddleWidth) {
+          ballSpeedY = -ballSpeedY;
+        } else {
+          alert("Fim de jogo!");
+          document.location.reload();
+        }
+      }
+
+      ballX += ballSpeedX;
+      ballY += ballSpeedY;
+
+      requestAnimationFrame(draw);
+    }
+
+    // Controles
+    document.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      paddleX = e.clientX - rect.left - paddleWidth / 2;
+    });
+
+    document.addEventListener("touchmove", (e) => {
+      e.preventDefault(); // Evita scroll
+      const rect = canvas.getBoundingClientRect();
+      paddleX = e.touches[0].clientX - rect.left - paddleWidth / 2;
+    }, { passive: false });
+
+    draw();
+  </script>
+</body>
+</html>
